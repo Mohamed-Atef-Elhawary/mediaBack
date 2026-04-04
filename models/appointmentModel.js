@@ -25,11 +25,14 @@ const appointmentSchema = new mongoose.Schema({
     type: Object,
     required: true,
   },
-  amount: {
+  price: {
     type: Number,
     required: true,
   },
-
+  date: {
+    type: String,
+    required: true,
+  },
   cancelled: {
     type: Boolean,
     default: false,

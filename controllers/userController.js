@@ -4,6 +4,8 @@ import userModel from "../models/userModel.js";
 import appointmentModel from "../models/appointmentModel.js";
 import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
+import doctorModel from "../models/doctorModel.js";
+import axios from "axios";
 
 //API for register
 
@@ -211,9 +213,210 @@ const updateProfile = async (req, res) => {
     });
   }
 };
+const bookAppointment = async (req, res) => {
+  try {
+    const { userId, docId, appointmentDate, appointmentTime } = req.body;
+    const docData = await doctorModel.findById(docId).select("-password");
+    if (!docData || !docData.available) {
+      return res.json({
+        success: false,
+        message: "Doctor is not available",
+        data: null,
+      });
+    }
+    let appointmentBooked = docData.appointmentBooked || {};
+    if (appointmentBooked[appointmentDate]) {
+      if (appointmentBooked[appointmentDate].includes(appointmentTime)) {
+        return res.json({
+          success: false,
+          message: "Appointment time is not available",
+          data: null,
+        });
+      } else {
+        appointmentBooked[appointmentDate].push(appointmentTime);
+      }
+    } else {
+      appointmentBooked[appointmentDate] = [appointmentTime];
+    }
+    const userData = await userModel.findById(userId).select("-password");
+    const docInfo = docData.toObject();
+    delete docInfo.appointmentBooked;
+
+    const appointmentData = {
+      userId,
+      docId,
+      appointmentDate,
+      appointmentTime,
+      userData,
+      docData: docInfo,
+      price: docInfo.consultationFee,
+      date: Date.now(),
+    };
+    const newAppointment = new appointmentModel(appointmentData);
+    await newAppointment.save();
+
+    await doctorModel.findByIdAndUpdate(docId, { appointmentBooked });
+    res.json({
+      success: true,
+      message: "Appointment booked Succeeded",
+      data: newAppointment,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
+
+const listAppointments = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const appointments = await appointmentModel.find({ userId });
+    if (!appointments.length) {
+      return res.json({
+        success: false,
+        message: "No appointments found",
+        data: [],
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "All appointments",
+      data: appointments,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
+const cancelAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const appointment = await appointmentModel.findById(appointmentId);
+    if (!appointment) {
+      return res.json({
+        success: false,
+        message: "No appointment to cancel",
+        data: null,
+      });
+    }
+    if (
+      appointment.cancelled ||
+      appointment.payment ||
+      appointment.isCompleted
+    ) {
+      return res.json({
+        success: false,
+        message: "Appointment can not cancelled",
+        data: null,
+      });
+    }
+
+    appointment.cancelled = true;
+    await appointment.save();
+
+    //update doctor appointmentBooked
+    const docData = await doctorModel.findById(appointment.docId);
+
+    let appointmentBooked = docData.appointmentBooked;
+    let appointmentDate = appointmentBooked[appointment.appointmentDate];
+
+    appointmentDate = appointmentDate.filter(
+      (time) => time !== appointment.appointmentTime,
+    );
+
+    appointmentBooked[appointment.appointmentDate] = appointmentDate;
+    // docData.appointmentBooked = appointmentBooked;
+    // await docData.save();
+    await doctorModel.findByIdAndUpdate(appointment.docId, {
+      appointmentBooked,
+    });
+
+    res.json({
+      success: true,
+      message: "Appointment cancelled success",
+      data: null,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
+
+const paymentPaymob = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    const appointment = await appointmentModel.findById(appointmentId);
+
+    const payMob = await axios.post(
+      "https://accept.paymob.com/v1/intention/",
+      {
+        amount: appointment.price * 100,
+        currency: process.env.CURRENCY,
+        payment_methods: [Number(process.env.PAYMOBINTEGRATIONID)],
+
+        billing_data: {
+          first_name: appointment.userData.name.split(" ")[0] || "patient",
+          last_name: appointment.userData.name.split(" ")[1] || "Patient",
+          email: appointment.userData.email,
+          phone_number: appointment.userData.phone || "01000000000",
+          // بيانات dummy عشان الـ API يقبل
+          apartment: "NA",
+          floor: "NA",
+          street: "NA",
+          building: "NA",
+          city: "Cairo",
+          country: "EG",
+          state: "Cairo",
+        },
+      },
+      {
+        headers: {
+          Authorization: `Token ${process.env.PAYMOBSECRETKEY}`,
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    // payment_url: payMob.data.client_url
+    return res.json({
+      success: true,
+      message: " Pay online integrated successfully",
+      data: payMob.data.client_url,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
+
+const paymobWebhook = async (req, res) => {};
+const paymobResponse = async (req, res) => {};
+
 export const userController = {
   register,
   login,
   getProfile,
   updateProfile,
+  bookAppointment,
+  listAppointments,
+  cancelAppointment,
+  paymentPaymob,
+  paymobWebhook,
+  paymobResponse,
 };
