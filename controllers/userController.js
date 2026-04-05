@@ -158,7 +158,11 @@ const updateProfile = async (req, res) => {
     const user = await userModel.findById(userId);
 
     if (!user) {
-      return res.json({ success: false, message: "User not found" });
+      return res.json({
+        success: false,
+        message: "User not found",
+        data: null,
+      });
     }
 
     if (imgFile) {
@@ -201,7 +205,7 @@ const updateProfile = async (req, res) => {
     };
     res.json({
       success: true,
-      message: "User profile updated successfully",
+      message: "Profile updated successfully",
       data: userData,
     });
   } catch (error) {
@@ -271,13 +275,13 @@ const bookAppointment = async (req, res) => {
   }
 };
 
-const listAppointments = async (req, res) => {
+const appointmentsList = async (req, res) => {
   try {
     const { userId } = req.body;
     const appointments = await appointmentModel.find({ userId });
     if (!appointments.length) {
       return res.json({
-        success: false,
+        success: true,
         message: "No appointments found",
         data: [],
       });
@@ -414,7 +418,7 @@ export const userController = {
   getProfile,
   updateProfile,
   bookAppointment,
-  listAppointments,
+  appointmentsList,
   cancelAppointment,
   paymentPaymob,
   paymobWebhook,

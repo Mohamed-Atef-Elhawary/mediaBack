@@ -14,7 +14,8 @@ const authUser = async (req, res, next) => {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Access Denied. No token provided in correct format",
+        message: "Access Denied. Not provided in correct format",
+        data: null,
       });
     }
     const token = authHeader.split(" ")[1];
