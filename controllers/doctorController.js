@@ -11,7 +11,11 @@ const login = async (req, res) => {
       return res.json({ success: false, message: "Missing data", data: null });
     }
     if (!validator.isEmail(email)) {
-      return res.json({ success: false, message: "Invalid data", data: null });
+      return res.json({
+        success: false,
+        message: "Please enter a valid email",
+        data: null,
+      });
     }
 
     const doctor = await doctorModel.findOne({ email });
@@ -35,19 +39,12 @@ const login = async (req, res) => {
 
     //generate token
     const token = jwt.sign({ id: doctor._id }, process.env.JWTSECRET);
-    if (token) {
-      return res.json({
-        success: true,
-        message: "Login Succeeded",
-        data: token,
-      });
-    } else {
-      return res.json({
-        success: false,
-        message: "Login Failed",
-        data: null,
-      });
-    }
+
+    return res.json({
+      success: true,
+      message: "Login Succeeded",
+      data: token,
+    });
   } catch (error) {
     console.log(error);
     return res.json({ success: false, message: error.message, data: null });
@@ -92,10 +89,14 @@ const updateProfile = async (req, res) => {
       });
     }
     if (imgFile) {
+      if (doctor.imagePublicId) {
+        await cloudinary.uploader.destroy(user.imagePublicId);
+      }
       const uploadedImg = await cloudinary.uploader.upload(imgFile.path, {
         resource_type: "image",
       });
       doctor.image = uploadedImg.secure_url;
+      doctor.imagePublicId = uploadedImg.public_id;
     }
     doctor.consultationFee = Number(consultationFee);
     doctor.address = JSON.parse(address);

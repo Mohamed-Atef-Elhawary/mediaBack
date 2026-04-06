@@ -19,6 +19,9 @@ const doctorSchema = new mongoose.Schema(
       default:
         "https://res.cloudinary.com/dmyfciqzs/image/upload/v1774957511/doctorImage_Image_vmips5vmips5vmip.png_qecjyv.png",
     },
+    imagePublicId: {
+      type: String,
+    },
     speciality: {
       type: String,
       required: true,
@@ -37,6 +40,10 @@ const doctorSchema = new mongoose.Schema(
     },
     consultationFee: {
       type: Number,
+      required: true,
+    },
+    date: {
+      type: String,
       required: true,
     },
     available: {

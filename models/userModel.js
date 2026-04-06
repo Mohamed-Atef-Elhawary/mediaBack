@@ -19,6 +19,9 @@ const userSchema = new mongoose.Schema(
       default:
         "https://res.cloudinary.com/dmyfciqzs/image/upload/v1774955804/userImage_2r8paw2r8paw2r8p.png_yg7miu.png",
     },
+    imagePublicId: {
+      type: String,
+    },
     address: {
       type: Object,
       default: {

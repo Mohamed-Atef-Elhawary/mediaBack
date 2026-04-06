@@ -1,6 +1,5 @@
-// jwt.sign({ id: doctor._id }, process.env.JWTSECRET);
 import jwt from "jsonwebtoken";
-const authDoctor = async (req, res, next) => {
+const authAdmin = async (req, res, next) => {
   try {
     const { authorization } = req.headers;
     if (!authorization || !authorization.startsWith("Bearer ")) {
@@ -11,12 +10,11 @@ const authDoctor = async (req, res, next) => {
       });
     }
     const token = authorization.split(" ")[1];
-    const decode = jwt.verify(token, process.env.JWTSECRET);
-
-    if (!req.body) {
-      req.body = {};
-    }
-    req.body.docId = decode.id;
+    const decoded = jwt.verify(token, process.env.JWTSECRET);
+    // if (!req.body) {
+    //   req.body = {};
+    // }
+    // req.body.adminId = decoded.id;
     next();
   } catch (error) {
     console.log(error);
@@ -27,5 +25,4 @@ const authDoctor = async (req, res, next) => {
     });
   }
 };
-
-export default authDoctor;
+export default authAdmin;

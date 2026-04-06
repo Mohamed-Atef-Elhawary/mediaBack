@@ -31,6 +31,7 @@ const register = async (req, res) => {
         data: null,
       });
     }
+    password = String(password);
     if (password.trim().length < 8) {
       return res.json({
         success: false,
@@ -40,7 +41,7 @@ const register = async (req, res) => {
     }
     //password hashing
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await bcrypt.hash(password.trim(), salt);
     const userData = {
       name,
       email,
@@ -51,19 +52,12 @@ const register = async (req, res) => {
 
     //generate token
     const token = jwt.sign({ id: user._id }, process.env.JWTSECRET);
-    if (token) {
-      return res.json({
-        success: true,
-        message: "Register Succeeded",
-        data: token,
-      });
-    } else {
-      return res.json({
-        success: false,
-        message: "Register Failed",
-        data: null,
-      });
-    }
+
+    res.json({
+      success: true,
+      message: "Register Succeeded",
+      data: token,
+    });
   } catch (error) {
     console.log(error);
     return res.json({ success: false, message: error.message, data: null });
@@ -166,6 +160,9 @@ const updateProfile = async (req, res) => {
     }
 
     if (imgFile) {
+      if (doctor.imagePublicId) {
+        await cloudinary.uploader.destroy(user.imagePublicId);
+      }
       const uploadedImg = await cloudinary.uploader.upload(imgFile.path, {
         resource_type: "image",
       });
