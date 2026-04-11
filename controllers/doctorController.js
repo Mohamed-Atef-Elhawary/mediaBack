@@ -150,8 +150,9 @@ const changeAvailability = async (req, res) => {
 const doctorsList = async (req, res) => {
   try {
     const doctors = await doctorModel
-      .find({ available: true })
-      .select(["-password", "-email"]);
+      // .find({ available: true })
+      .find({})
+      .select(["-password", "-email", "-__v"]);
 
     return res.json({
       success: true,
