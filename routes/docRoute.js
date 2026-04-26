@@ -13,6 +13,7 @@ docRouter.post(
 );
 docRouter.get("/available", authDoctor, doctorController.changeAvailability);
 docRouter.get("/list", doctorController.doctorsList);
+docRouter.get("/doctor/:docId", doctorController.doctor);
 docRouter.get("/appointment", authDoctor, doctorController.doctorAppointments);
 docRouter.get("/complete", authDoctor, doctorController.completeAppointment);
 docRouter.get("/cancel", authDoctor, doctorController.cancelAppointment);

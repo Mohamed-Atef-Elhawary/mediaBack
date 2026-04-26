@@ -20,10 +20,11 @@ const authUser = async (req, res, next) => {
     }
     const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWTSECRET);
-
+    console.log("from authUser decoded is ", decoded);
     if (!req.body) {
       req.body = {};
     }
+
     req.body.userId = decoded.id;
     next();
   } catch (error) {

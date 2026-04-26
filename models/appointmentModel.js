@@ -46,10 +46,10 @@ const appointmentSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  paymentOrderId: {
-    type: String,
-    default: "",
-  },
+  // paymentOrderId: {
+  //   type: String,
+  //   default: "",
+  // },
 });
 const appointmentModel =
   mongoose.models.appointment ||

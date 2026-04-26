@@ -10,13 +10,13 @@ userRouter.post("/login", userController.login);
 userRouter.get("/profile", authUser, userController.getProfile);
 userRouter.post(
   "/update",
-  authUser,
   upload.single("image"),
+  authUser,
   userController.updateProfile,
 );
 userRouter.post("/book", authUser, userController.bookAppointment);
-userRouter.get("/appointment", authUser, userController.appointmentsList);
-userRouter.get("/cancel", authUser, userController.cancelAppointment);
+userRouter.get("/appointments", authUser, userController.appointmentsList);
+userRouter.post("/cancel", authUser, userController.cancelAppointment);
 
 userRouter.post("/pay", authUser, userController.paymentPaymob);
 // رابط الـ Webhook (بايموب بيبعت عليه نتيجة الدفع للسيرفر)

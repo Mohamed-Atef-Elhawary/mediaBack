@@ -11,7 +11,7 @@ import axios from "axios";
 
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    let { name, email, password } = req.body;
     if (!name || !email || !password) {
       return res.json({ success: false, message: "Missing data", data: null });
     }
@@ -56,7 +56,7 @@ const register = async (req, res) => {
     res.json({
       success: true,
       message: "Register Succeeded",
-      data: token,
+      data: { token, image: user.image, name: user.name },
     });
   } catch (error) {
     console.log(error);
@@ -97,10 +97,11 @@ const login = async (req, res) => {
     //generate token
     const token = jwt.sign({ id: user._id }, process.env.JWTSECRET);
     if (token) {
+      console.log(user);
       return res.json({
         success: true,
         message: "Login Succeeded",
-        data: token,
+        data: { token, image: user.image, name: user.name },
       });
     } else {
       return res.json({
@@ -120,7 +121,7 @@ const getProfile = async (req, res) => {
     const { userId } = req.body;
     const user = await userModel
       .findById(userId)
-      .select("name email image gender dateOfBirth phone,address");
+      .select("name email image gender dateOfBirth phone address");
     if (!user) {
       return res.json({
         success: false,
@@ -128,7 +129,11 @@ const getProfile = async (req, res) => {
         data: null,
       });
     }
-
+    try {
+      console.log("user.address", user.address);
+    } catch (error) {
+      console.log(error);
+    }
     return res.json({
       success: true,
       message: "User profile fetched successfully",
@@ -149,6 +154,8 @@ const updateProfile = async (req, res) => {
     const { userId, name, email, gender, dateOfBirth, phone, address } =
       req.body;
     const imgFile = req.file;
+
+    console.log("userId", userId);
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -160,7 +167,7 @@ const updateProfile = async (req, res) => {
     }
 
     if (imgFile) {
-      if (doctor.imagePublicId) {
+      if (user.imagePublicId) {
         await cloudinary.uploader.destroy(user.imagePublicId);
       }
       const uploadedImg = await cloudinary.uploader.upload(imgFile.path, {
@@ -199,6 +206,8 @@ const updateProfile = async (req, res) => {
       dateOfBirth: user.dateOfBirth,
       phone: user.phone,
       address: user.address,
+      image: user.image,
+      _id: user._id,
     };
     res.json({
       success: true,
@@ -206,6 +215,7 @@ const updateProfile = async (req, res) => {
       data: userData,
     });
   } catch (error) {
+    console.log("fromcatchllllllllllll");
     console.log(error);
     return res.json({
       success: false,
@@ -311,7 +321,7 @@ const cancelAppointment = async (req, res) => {
     }
     if (
       appointment.cancelled ||
-      appointment.payment ||
+      // appointment.payment ||
       appointment.isCompleted
     ) {
       return res.json({
@@ -341,6 +351,7 @@ const cancelAppointment = async (req, res) => {
       appointmentBooked,
     });
 
+    await appointmentModel.findByIdAndDelete(appointmentId);
     res.json({
       success: true,
       message: "Appointment cancelled success",

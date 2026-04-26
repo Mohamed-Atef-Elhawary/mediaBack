@@ -147,6 +147,33 @@ const changeAvailability = async (req, res) => {
     });
   }
 };
+const doctor = async (req, res) => {
+  try {
+    let docId = req.params.docId;
+    const doctor = await doctorModel
+      .findById(docId)
+      .select(["-password", "-email", "-__v"]);
+    if (!doctor) {
+      return res.json({
+        success: false,
+        message: "No  doctors found",
+        data: null,
+      });
+    }
+    res.json({
+      success: true,
+      message: "Doctor is fount",
+      data: doctor,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
 const doctorsList = async (req, res) => {
   try {
     const doctors = await doctorModel
@@ -308,6 +335,7 @@ export const doctorController = {
   updateProfile,
   changeAvailability,
   doctorsList,
+  doctor,
   doctorAppointments,
   completeAppointment,
   cancelAppointment,

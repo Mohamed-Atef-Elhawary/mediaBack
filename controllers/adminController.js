@@ -30,11 +30,11 @@ const login = async (req, res) => {
       });
     }
     const token = jwt.sign({ id: email }, process.env.JWTSECRET);
-
+    const image = process.env.ADMINIMAGE;
     res.json({
       success: true,
       message: "Login Succeeded",
-      data: token,
+      data: { token, image },
     });
   } catch (error) {
     console.log(error);
@@ -48,6 +48,7 @@ const login = async (req, res) => {
 
 const addDoctor = async (req, res) => {
   try {
+    console.log(req.body);
     const {
       name,
       email,
@@ -56,8 +57,8 @@ const addDoctor = async (req, res) => {
       experience,
       degree,
       consultationFee,
-      about,
       address,
+      about,
     } = req.body;
     const imgFile = req.file;
     if (
@@ -111,6 +112,7 @@ const addDoctor = async (req, res) => {
       date: Date.now(),
       address: JSON.parse(address),
     };
+    console.log("imgFile", imgFile);
     if (imgFile) {
       const uploaded = await cloudinary.uploader.upload(imgFile.path, {
         resource_type: "image",
@@ -136,8 +138,8 @@ const addDoctor = async (req, res) => {
 const doctorsList = async (req, res) => {
   try {
     const doctors = await doctorModel
-      .find({ available: true })
-      .select("-password", "-email");
+      .find({})
+      .select("-password -email -imagePublicId");
 
     return res.json({
       success: true,
@@ -172,9 +174,15 @@ const appointmentsList = async (req, res) => {
 };
 
 const cancelAppointment = async (req, res) => {
+  console.log("red.body", req.body);
   try {
     const { appointmentId } = req.body;
     if (!appointmentId) {
+      return res.json({
+        success: false,
+        message: "Missing data",
+        data: null,
+      });
     }
     const appointment = await appointmentModel.findById(appointmentId);
     if (!appointment) {
@@ -191,8 +199,28 @@ const cancelAppointment = async (req, res) => {
         data: null,
       });
     }
+    const appointmentDate = appointment.appointmentDate;
+    const appointmentTime = appointment.appointmentTime;
+
+    const docId = appointment.docId;
+    const doctor = await doctorModel.findById(docId);
+    const appointmentBooked = doctor.appointmentBooked;
+    if (!appointmentBooked[appointmentDate]) {
+      return res.json({
+        success: false,
+        message: "Appointment can not be cancelled",
+        data: null,
+      });
+    }
+    appointmentBooked[appointmentDate] = appointmentBooked[
+      appointmentDate
+    ].filter((time) => time !== appointmentTime);
+    doctor.appointmentBooked = appointmentBooked;
+
+    await doctor.save();
+
     appointment.cancelled = true;
-    await appointment.save;
+    await appointment.save();
     res.json({
       success: true,
       message: "Appointment cancelled successfully",
@@ -207,10 +235,52 @@ const cancelAppointment = async (req, res) => {
     });
   }
 };
+const completeAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.body;
+    if (!appointmentId) {
+      return res.json({
+        success: false,
+        message: "Missing data",
+        data: null,
+      });
+    }
+    const appointment = await appointmentModel.findById(appointmentId);
+    if (!appointment) {
+      return res.json({
+        success: false,
+        message: "Appointment not found",
+        data: null,
+      });
+    }
+    if (appointment.cancelled) {
+      return res.json({
+        success: false,
+        message: "Appointment cancelled",
+        data: null,
+      });
+    }
+    await appointmentModel.findByIdAndUpdate(appointmentId, {
+      isCompleted: true,
+    });
+    res.json({
+      success: true,
+      message: "Appointment completed",
+      data: null,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
 const adminDashboard = async (req, res) => {
   try {
     const users = await userModel.find({});
-    const doctors = await doctorModel.fine({});
+    const doctors = await doctorModel.find({});
     const appointments = await appointmentModel.find({});
     const data = {
       numberOfAppointments: appointments.length,
@@ -238,5 +308,6 @@ export const adminController = {
   doctorsList,
   appointmentsList,
   cancelAppointment,
+  completeAppointment,
   adminDashboard,
 };
