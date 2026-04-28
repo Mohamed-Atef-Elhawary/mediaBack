@@ -101,7 +101,7 @@ const addDoctor = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(String(password).trim(), salt);
     const docData = {
-      name,
+      name: `Dr.${name}`,
       email,
       password: hashedPassword,
       speciality,

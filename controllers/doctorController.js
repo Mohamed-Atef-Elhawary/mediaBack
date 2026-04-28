@@ -2,6 +2,8 @@ import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/appointmentModel.js";
 import validator from "validator";
 import { v2 as cloudinary } from "cloudinary";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const login = async (req, res) => {
   try {
@@ -39,11 +41,13 @@ const login = async (req, res) => {
 
     //generate token
     const token = jwt.sign({ id: doctor._id }, process.env.JWTSECRET);
+    const image = doctor.image;
+    const name = doctor.name;
 
     return res.json({
       success: true,
       message: "Login Succeeded",
-      data: token,
+      data: { token, image, name },
     });
   } catch (error) {
     console.log(error);
@@ -90,7 +94,7 @@ const updateProfile = async (req, res) => {
     }
     if (imgFile) {
       if (doctor.imagePublicId) {
-        await cloudinary.uploader.destroy(user.imagePublicId);
+        await cloudinary.uploader.destroy(doctor.imagePublicId);
       }
       const uploadedImg = await cloudinary.uploader.upload(imgFile.path, {
         resource_type: "image",
@@ -116,37 +120,37 @@ const updateProfile = async (req, res) => {
     });
   }
 };
-const changeAvailability = async (req, res) => {
-  try {
-    const { docId } = req.body;
+// const changeAvailability = async (req, res) => {
+//   try {
+//     const { docId } = req.body;
 
-    const updatedDoc = await doctorModel.findByIdAndUpdate(
-      docId,
-      [{ $set: { available: { $not: "$available" } } }],
-      { new: true },
-    );
+//     const updatedDoc = await doctorModel.findByIdAndUpdate(
+//       docId,
+//       [{ $set: { available: { $not: "$available" } } }],
+//       { new: true },
+//     );
 
-    if (!updatedDoc) {
-      return res.json({
-        success: false,
-        message: "Doctor not found",
-        data: null,
-      });
-    }
-    res.json({
-      success: true,
-      message: "Availability changed correctly",
-      data: updatedDoc.available,
-    });
-  } catch (error) {
-    console.log(error);
-    return res.json({
-      success: false,
-      message: error.message,
-      data: null,
-    });
-  }
-};
+//     if (!updatedDoc) {
+//       return res.json({
+//         success: false,
+//         message: "Doctor not found",
+//         data: null,
+//       });
+//     }
+//     res.json({
+//       success: true,
+//       message: "Availability changed correctly",
+//       data: updatedDoc.available,
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     return res.json({
+//       success: false,
+//       message: error.message,
+//       data: null,
+//     });
+//   }
+// };
 const doctor = async (req, res) => {
   try {
     let docId = req.params.docId;
@@ -195,7 +199,10 @@ const doctorsList = async (req, res) => {
     });
   }
 };
+
 //Appointments for doctor panel
+//for media manager
+
 const doctorAppointments = async (req, res) => {
   try {
     const { docId } = req.body;
@@ -216,6 +223,7 @@ const doctorAppointments = async (req, res) => {
     });
   }
 };
+//for media manager
 
 const completeAppointment = async (req, res) => {
   try {
@@ -249,11 +257,26 @@ const completeAppointment = async (req, res) => {
     });
   }
 };
+//for media manager
+
 const cancelAppointment = async (req, res) => {
+  const session = await mongoose.startSession();
+
+  session.startTransaction();
+
   try {
     const { appointmentId, docId } = req.body;
-    const appointment = await appointmentModel.findById(appointmentId);
-    if (!appointment || String(appointment.docId) !== String(docId)) {
+    const appointment = await appointmentModel
+      .findById(appointmentId)
+      .session(session);
+    const doctor = await doctorModel.findById(docId).session(session);
+    if (
+      !appointment ||
+      !doctor ||
+      String(appointment.docId) !== String(docId)
+    ) {
+      await session.abortTransaction();
+      session.endSession();
       return res.json({
         success: false,
         message: "Appointment not found or access denied",
@@ -261,6 +284,8 @@ const cancelAppointment = async (req, res) => {
       });
     }
     if (appointment.isPaid || appointment.isCompleted) {
+      await session.abortTransaction();
+      session.endSession();
       return res.json({
         success: false,
         message: "Appointment can not be cancelled",
@@ -268,14 +293,29 @@ const cancelAppointment = async (req, res) => {
       });
     }
 
+    let appointmentDate =
+      doctor.appointmentBooked[appointment.appointmentDate] || [];
+    appointmentDate = appointmentDate.filter(
+      (time) => time !== appointment.appointmentTime,
+    );
+
+    doctor.appointmentBooked[appointment.appointmentDate] = appointmentDate;
     appointment.cancelled = true;
-    await appointment.save();
+    await doctor.save({ session });
+    await appointment.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
     res.json({
       success: true,
       message: "Appointment cancelled successfully",
       data: null,
     });
   } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
     console.log(error);
     return res.json({
       success: false,
@@ -285,13 +325,14 @@ const cancelAppointment = async (req, res) => {
   }
 };
 
+//for media manager
 const doctorDashboard = async (req, res) => {
   try {
     const { docId } = req.body;
     const doctor = await doctorModel.findById(docId).select("-password");
     const appointments = await appointmentModel.find({
       docId,
-      isPaid: true,
+      isCompleted: true,
     });
 
     // let patients=[];
@@ -311,7 +352,7 @@ const doctorDashboard = async (req, res) => {
       money,
       numberOfAppointments: appointments.length,
       numberOfPatients: patients.size,
-      latestAppointments: appointments.reverse(),
+      completedAppointments: appointments.reverse(),
     };
 
     res.json({
@@ -333,7 +374,7 @@ export const doctorController = {
   login,
   getProfile,
   updateProfile,
-  changeAvailability,
+  // changeAvailability,
   doctorsList,
   doctor,
   doctorAppointments,
