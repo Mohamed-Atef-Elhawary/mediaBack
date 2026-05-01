@@ -16,7 +16,8 @@ adminRouter.get(
   authAdmin,
   adminController.appointmentsList,
 );
-adminRouter.post("/cancel", authAdmin, adminController.cancelAppointment);
+// adminRouter.post("/cancel", authAdmin, adminController.cancelAppointment);
+adminRouter.post("/delete", authAdmin, adminController.deleteAppoinement);
 adminRouter.post("/complete", authAdmin, adminController.completeAppointment);
 adminRouter.get("/dashboard", authAdmin, adminController.adminDashboard);
 

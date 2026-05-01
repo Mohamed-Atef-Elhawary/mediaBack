@@ -173,7 +173,8 @@ const appointmentsList = async (req, res) => {
   }
 };
 
-const cancelAppointment = async (req, res) => {
+// const cancelAppointment = async (req, res) => {
+const deleteAppoinement = async (req, res) => {
   console.log("red.body", req.body);
   try {
     const { appointmentId } = req.body;
@@ -192,38 +193,18 @@ const cancelAppointment = async (req, res) => {
         data: null,
       });
     }
-    if (appointment.isPaid || appointment.isCompleted) {
+    if (!appointment.cancelled) {
       return res.json({
         success: false,
-        message: "Appointment can not be cancelled",
+        message: "Appointment can not be deleted",
         data: null,
       });
     }
-    const appointmentDate = appointment.appointmentDate;
-    const appointmentTime = appointment.appointmentTime;
 
-    const docId = appointment.docId;
-    const doctor = await doctorModel.findById(docId);
-    const appointmentBooked = doctor.appointmentBooked;
-    if (!appointmentBooked[appointmentDate]) {
-      return res.json({
-        success: false,
-        message: "Appointment can not be cancelled",
-        data: null,
-      });
-    }
-    appointmentBooked[appointmentDate] = appointmentBooked[
-      appointmentDate
-    ].filter((time) => time !== appointmentTime);
-    doctor.appointmentBooked = appointmentBooked;
-
-    await doctor.save();
-
-    appointment.cancelled = true;
-    await appointment.save();
+    await appointmentModel.findByIdAndDelete(appointmentId);
     res.json({
       success: true,
-      message: "Appointment cancelled successfully",
+      message: "Appointment deleted successfully",
       data: null,
     });
   } catch (error) {
@@ -307,7 +288,8 @@ export const adminController = {
   addDoctor,
   doctorsList,
   appointmentsList,
-  cancelAppointment,
+  // cancelAppointment,
+  deleteAppoinement,
   completeAppointment,
   adminDashboard,
 };

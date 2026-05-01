@@ -285,7 +285,10 @@ const bookAppointment = async (req, res) => {
 const appointmentsList = async (req, res) => {
   try {
     const { userId } = req.body;
-    const appointments = await appointmentModel.find({ userId });
+    const appointments = await appointmentModel.find({
+      userId,
+      cancelled: false,
+    });
     if (!appointments.length) {
       return res.json({
         success: true,
@@ -351,10 +354,10 @@ const cancelAppointment = async (req, res) => {
       appointmentBooked,
     });
 
-    await appointmentModel.findByIdAndDelete(appointmentId);
+    // await appointmentModel.findByIdAndDelete(appointmentId);
     res.json({
       success: true,
-      message: "Appointment cancelled success",
+      message: "Appointment cancelled successfully",
       data: null,
     });
   } catch (error) {

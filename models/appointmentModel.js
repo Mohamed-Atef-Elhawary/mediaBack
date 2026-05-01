@@ -38,18 +38,10 @@ const appointmentSchema = new mongoose.Schema({
     default: false,
   },
 
-  isPaid: {
-    type: Boolean,
-    default: false,
-  },
   isCompleted: {
     type: Boolean,
     default: false,
   },
-  // paymentOrderId: {
-  //   type: String,
-  //   default: "",
-  // },
 });
 const appointmentModel =
   mongoose.models.appointment ||

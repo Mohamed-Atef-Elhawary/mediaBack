@@ -120,37 +120,7 @@ const updateProfile = async (req, res) => {
     });
   }
 };
-// const changeAvailability = async (req, res) => {
-//   try {
-//     const { docId } = req.body;
 
-//     const updatedDoc = await doctorModel.findByIdAndUpdate(
-//       docId,
-//       [{ $set: { available: { $not: "$available" } } }],
-//       { new: true },
-//     );
-
-//     if (!updatedDoc) {
-//       return res.json({
-//         success: false,
-//         message: "Doctor not found",
-//         data: null,
-//       });
-//     }
-//     res.json({
-//       success: true,
-//       message: "Availability changed correctly",
-//       data: updatedDoc.available,
-//     });
-//   } catch (error) {
-//     console.log(error);
-//     return res.json({
-//       success: false,
-//       message: error.message,
-//       data: null,
-//     });
-//   }
-// };
 const doctor = async (req, res) => {
   try {
     let docId = req.params.docId;
