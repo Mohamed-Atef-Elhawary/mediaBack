@@ -11,10 +11,6 @@ const authAdmin = async (req, res, next) => {
     }
     const token = authorization.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWTSECRET);
-    // if (!req.body) {
-    //   req.body = {};
-    // }
-    // req.body.adminId = decoded.id;
     next();
   } catch (error) {
     console.log(error);

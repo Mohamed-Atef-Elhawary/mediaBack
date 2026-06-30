@@ -8,6 +8,7 @@ const userRouter = express.Router();
 userRouter.post("/register", userController.register);
 userRouter.post("/login", userController.login);
 userRouter.get("/profile", authUser, userController.getProfile);
+
 userRouter.post(
   "/update",
   upload.single("image"),
@@ -17,14 +18,5 @@ userRouter.post(
 userRouter.post("/book", authUser, userController.bookAppointment);
 userRouter.get("/appointments", authUser, userController.appointmentsList);
 userRouter.post("/cancel", authUser, userController.cancelAppointment);
-
-userRouter.post("/pay", authUser, userController.paymentPaymob);
-// رابط الـ Webhook (بايموب بيبعت عليه نتيجة الدفع للسيرفر)
-userRouter.post("/paymob-webhook", userController.paymobWebhook);
-
-// رابط الـ Response (بايموب بيرجع اليوزر عليه بعد ما يخلص)
-userRouter.get("/paymob-response", userController.paymobResponse);
-
-// userRouter.get("/veriy", authUser, userController.verifyPayment);
 
 export default userRouter;

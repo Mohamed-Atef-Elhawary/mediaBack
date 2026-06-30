@@ -5,6 +5,48 @@ import bcrypt from "bcrypt";
 import { v2 as cloudinary } from "cloudinary";
 import appointmentModel from "../models/appointmentModel.js";
 import userModel from "../models/userModel.js";
+import adminModel from "../models/adminModel.js";
+const register = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      res.json({ success: false, message: "missing data", data: null });
+    }
+    if (
+      email !== process.env.ADMINEMAIL ||
+      password !== process.env.ADMINPASSWORD
+    ) {
+      res.json({ success: false, message: "invalid data", data: null });
+    }
+
+    if (!validator.isEmail(email)) {
+      res.json({
+        success: false,
+        message: "Please enter a valid email",
+        data: null,
+      });
+    }
+    const hashedEmail = await bcrypt.hash(email, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const data = {
+      email: hashedEmail,
+      password: hashedPassword,
+    };
+    const newAdmin = new adminModel(data);
+    await newAdmin.save();
+    res.json({
+      success: true,
+      massage: "admin created",
+      data: newAdmin,
+    });
+  } catch (error) {
+    return res.json({
+      success: false,
+      message: error.message,
+      data: null,
+    });
+  }
+};
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -37,7 +79,6 @@ const login = async (req, res) => {
       data: { token, image },
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -48,7 +89,6 @@ const login = async (req, res) => {
 
 const addDoctor = async (req, res) => {
   try {
-    console.log(req.body);
     const {
       name,
       email,
@@ -98,8 +138,7 @@ const addDoctor = async (req, res) => {
       });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(String(password).trim(), salt);
+    const hashedPassword = await bcrypt.hash(String(password).trim(), 10);
     const docData = {
       name: `Dr.${name}`,
       email,
@@ -112,7 +151,6 @@ const addDoctor = async (req, res) => {
       date: Date.now(),
       address: JSON.parse(address),
     };
-    console.log("imgFile", imgFile);
     if (imgFile) {
       const uploaded = await cloudinary.uploader.upload(imgFile.path, {
         resource_type: "image",
@@ -127,7 +165,6 @@ const addDoctor = async (req, res) => {
       data: null,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -137,9 +174,7 @@ const addDoctor = async (req, res) => {
 };
 const doctorsList = async (req, res) => {
   try {
-    const doctors = await doctorModel
-      .find({})
-      .select("-password -email -imagePublicId");
+    const doctors = await doctorModel.find({}).select("-password -email");
 
     return res.json({
       success: true,
@@ -147,7 +182,6 @@ const doctorsList = async (req, res) => {
       data: doctors,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -164,7 +198,6 @@ const appointmentsList = async (req, res) => {
       data: appointments,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -173,9 +206,7 @@ const appointmentsList = async (req, res) => {
   }
 };
 
-// const cancelAppointment = async (req, res) => {
 const deleteAppoinement = async (req, res) => {
-  console.log("red.body", req.body);
   try {
     const { appointmentId } = req.body;
     if (!appointmentId) {
@@ -208,7 +239,6 @@ const deleteAppoinement = async (req, res) => {
       data: null,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -250,7 +280,6 @@ const completeAppointment = async (req, res) => {
       data: null,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -275,7 +304,6 @@ const adminDashboard = async (req, res) => {
       data,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -284,11 +312,11 @@ const adminDashboard = async (req, res) => {
   }
 };
 export const adminController = {
+  register,
   login,
   addDoctor,
   doctorsList,
   appointmentsList,
-  // cancelAppointment,
   deleteAppoinement,
   completeAppointment,
   adminDashboard,

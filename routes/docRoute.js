@@ -11,11 +11,11 @@ docRouter.post(
   authDoctor,
   doctorController.updateProfile,
 );
-// docRouter.get("/available", authDoctor, doctorController.changeAvailability);
+
 docRouter.get("/list", doctorController.doctorsList);
 docRouter.get("/doctor/:docId", doctorController.doctor);
 docRouter.get("/appointment", authDoctor, doctorController.doctorAppointments);
 docRouter.post("/complete", authDoctor, doctorController.completeAppointment);
-docRouter.post("/cancel", authDoctor, doctorController.cancelAppointment);
+
 docRouter.get("/dashboard", authDoctor, doctorController.doctorDashboard);
 export default docRouter;

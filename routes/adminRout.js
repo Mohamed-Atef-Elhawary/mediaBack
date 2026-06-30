@@ -3,6 +3,7 @@ import authAdmin from "../middleWares/authAdmin.js";
 import { adminController } from "../controllers/adminController.js";
 import upload from "../middleWares/multer.js";
 const adminRouter = express.Router();
+adminRouter.post("/register", adminController.register);
 adminRouter.post("/login", adminController.login);
 adminRouter.post(
   "/add",
@@ -16,7 +17,6 @@ adminRouter.get(
   authAdmin,
   adminController.appointmentsList,
 );
-// adminRouter.post("/cancel", authAdmin, adminController.cancelAppointment);
 adminRouter.post("/delete", authAdmin, adminController.deleteAppoinement);
 adminRouter.post("/complete", authAdmin, adminController.completeAppointment);
 adminRouter.get("/dashboard", authAdmin, adminController.adminDashboard);

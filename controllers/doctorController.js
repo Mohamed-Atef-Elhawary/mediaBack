@@ -39,7 +39,6 @@ const login = async (req, res) => {
       });
     }
 
-    //generate token
     const token = jwt.sign({ id: doctor._id }, process.env.JWTSECRET);
     const image = doctor.image;
     const name = doctor.name;
@@ -50,7 +49,6 @@ const login = async (req, res) => {
       data: { token, image, name },
     });
   } catch (error) {
-    console.log(error);
     return res.json({ success: false, message: error.message, data: null });
   }
 };
@@ -72,7 +70,6 @@ const getProfile = async (req, res) => {
       data: doctor,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: "Internal Server Error",
@@ -93,14 +90,10 @@ const updateProfile = async (req, res) => {
       });
     }
     if (imgFile) {
-      if (doctor.imagePublicId) {
-        await cloudinary.uploader.destroy(doctor.imagePublicId);
-      }
       const uploadedImg = await cloudinary.uploader.upload(imgFile.path, {
         resource_type: "image",
       });
       doctor.image = uploadedImg.secure_url;
-      doctor.imagePublicId = uploadedImg.public_id;
     }
     doctor.consultationFee = Number(consultationFee);
     doctor.address = JSON.parse(address);
@@ -112,7 +105,6 @@ const updateProfile = async (req, res) => {
       data: doctor,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -140,7 +132,6 @@ const doctor = async (req, res) => {
       data: doctor,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -148,10 +139,10 @@ const doctor = async (req, res) => {
     });
   }
 };
+
 const doctorsList = async (req, res) => {
   try {
     const doctors = await doctorModel
-      // .find({ available: true })
       .find({})
       .select(["-password", "-email", "-__v"]);
 
@@ -161,7 +152,6 @@ const doctorsList = async (req, res) => {
       data: doctors,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -170,9 +160,7 @@ const doctorsList = async (req, res) => {
   }
 };
 
-//Appointments for doctor panel
-//for media manager
-
+//Appointments  media manager
 const doctorAppointments = async (req, res) => {
   try {
     const { docId } = req.body;
@@ -185,7 +173,6 @@ const doctorAppointments = async (req, res) => {
       data: appointments,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -193,7 +180,6 @@ const doctorAppointments = async (req, res) => {
     });
   }
 };
-//for media manager
 
 const completeAppointment = async (req, res) => {
   try {
@@ -219,74 +205,6 @@ const completeAppointment = async (req, res) => {
       data: null,
     });
   } catch (error) {
-    console.log(error);
-    return res.json({
-      success: false,
-      message: error.message,
-      data: null,
-    });
-  }
-};
-//for media manager
-
-const cancelAppointment = async (req, res) => {
-  const session = await mongoose.startSession();
-
-  session.startTransaction();
-
-  try {
-    const { appointmentId, docId } = req.body;
-    const appointment = await appointmentModel
-      .findById(appointmentId)
-      .session(session);
-    const doctor = await doctorModel.findById(docId).session(session);
-    if (
-      !appointment ||
-      !doctor ||
-      String(appointment.docId) !== String(docId)
-    ) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.json({
-        success: false,
-        message: "Appointment not found or access denied",
-        data: null,
-      });
-    }
-    if (appointment.isPaid || appointment.isCompleted) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.json({
-        success: false,
-        message: "Appointment can not be cancelled",
-        data: null,
-      });
-    }
-
-    let appointmentDate =
-      doctor.appointmentBooked[appointment.appointmentDate] || [];
-    appointmentDate = appointmentDate.filter(
-      (time) => time !== appointment.appointmentTime,
-    );
-
-    doctor.appointmentBooked[appointment.appointmentDate] = appointmentDate;
-    appointment.cancelled = true;
-    await doctor.save({ session });
-    await appointment.save({ session });
-
-    await session.commitTransaction();
-    session.endSession();
-    res.json({
-      success: true,
-      message: "Appointment cancelled successfully",
-      data: null,
-    });
-  } catch (error) {
-    if (session) {
-      await session.abortTransaction();
-      session.endSession();
-    }
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -295,7 +213,6 @@ const cancelAppointment = async (req, res) => {
   }
 };
 
-//for media manager
 const doctorDashboard = async (req, res) => {
   try {
     const { docId } = req.body;
@@ -304,13 +221,6 @@ const doctorDashboard = async (req, res) => {
       docId,
       isCompleted: true,
     });
-
-    // let patients=[];
-    // appointments.forEach(appointment=>{
-    //     if (!patients.includes(appointment.userId)) {
-    //         patients.push(appointment.userId)
-    //     }
-    // })
 
     let patients = new Set();
     appointments.forEach((appointment) => {
@@ -324,14 +234,12 @@ const doctorDashboard = async (req, res) => {
       numberOfPatients: patients.size,
       completedAppointments: appointments.reverse(),
     };
-
     res.json({
       success: true,
       message: "Doctor dashboard data",
       data,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -344,22 +252,9 @@ export const doctorController = {
   login,
   getProfile,
   updateProfile,
-  // changeAvailability,
   doctorsList,
   doctor,
   doctorAppointments,
   completeAppointment,
-  cancelAppointment,
   doctorDashboard,
 };
-
-//  try {
-
-//   } catch (error) {
-//     console.log(error);
-//     return res.json({
-//       success: false,
-//       message: error.message,
-//       data: null,
-
-//   })}

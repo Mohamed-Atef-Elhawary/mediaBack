@@ -7,8 +7,6 @@ import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import axios from "axios";
 
-//API for register
-
 const register = async (req, res) => {
   try {
     let { name, email, password } = req.body;
@@ -39,9 +37,7 @@ const register = async (req, res) => {
         data: null,
       });
     }
-    //password hashing
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password.trim(), salt);
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
     const userData = {
       name,
       email,
@@ -50,16 +46,14 @@ const register = async (req, res) => {
     const newUser = new userModel(userData);
     const user = await newUser.save();
 
-    //generate token
     const token = jwt.sign({ id: user._id }, process.env.JWTSECRET);
 
     res.json({
       success: true,
-      message: "Register Succeeded",
-      data: { token, image: user.image, name: user.name },
+      message: "Register Successful",
+      data: { token, image: user.image, name: user.name, id: user._id },
     });
   } catch (error) {
-    console.log(error);
     return res.json({ success: false, message: error.message, data: null });
   }
 };
@@ -94,24 +88,14 @@ const login = async (req, res) => {
       });
     }
 
-    //generate token
     const token = jwt.sign({ id: user._id }, process.env.JWTSECRET);
-    if (token) {
-      console.log(user);
-      return res.json({
-        success: true,
-        message: "Login Succeeded",
-        data: { token, image: user.image, name: user.name },
-      });
-    } else {
-      return res.json({
-        success: false,
-        message: "Login Failed",
-        data: null,
-      });
-    }
+
+    return res.json({
+      success: true,
+      message: "Login Successfull",
+      data: { token, image: user.image, name: user.name, id: user._id },
+    });
   } catch (error) {
-    console.log(error);
     return res.json({ success: false, message: error.message, data: null });
   }
 };
@@ -129,18 +113,13 @@ const getProfile = async (req, res) => {
         data: null,
       });
     }
-    try {
-      console.log("user.address", user.address);
-    } catch (error) {
-      console.log(error);
-    }
+
     return res.json({
       success: true,
       message: "User profile fetched successfully",
       data: user,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: "Internal Server Error",
@@ -154,8 +133,6 @@ const updateProfile = async (req, res) => {
     const { userId, name, email, gender, dateOfBirth, phone, address } =
       req.body;
     const imgFile = req.file;
-
-    console.log("userId", userId);
     const user = await userModel.findById(userId);
 
     if (!user) {
@@ -167,9 +144,6 @@ const updateProfile = async (req, res) => {
     }
 
     if (imgFile) {
-      if (user.imagePublicId) {
-        await cloudinary.uploader.destroy(user.imagePublicId);
-      }
       const uploadedImg = await cloudinary.uploader.upload(imgFile.path, {
         resource_type: "image",
       });
@@ -215,8 +189,6 @@ const updateProfile = async (req, res) => {
       data: userData,
     });
   } catch (error) {
-    console.log("fromcatchllllllllllll");
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -235,6 +207,7 @@ const bookAppointment = async (req, res) => {
         data: null,
       });
     }
+
     let appointmentBooked = docData.appointmentBooked || {};
     if (appointmentBooked[appointmentDate]) {
       if (appointmentBooked[appointmentDate].includes(appointmentTime)) {
@@ -273,7 +246,6 @@ const bookAppointment = async (req, res) => {
       data: newAppointment,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -300,10 +272,9 @@ const appointmentsList = async (req, res) => {
     return res.json({
       success: true,
       message: "All appointments",
-      data: appointments,
+      data: appointments.reverse(),
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -322,11 +293,7 @@ const cancelAppointment = async (req, res) => {
         data: null,
       });
     }
-    if (
-      appointment.cancelled ||
-      // appointment.payment ||
-      appointment.isCompleted
-    ) {
+    if (appointment.cancelled || appointment.isCompleted) {
       return res.json({
         success: false,
         message: "Appointment can not cancelled",
@@ -348,20 +315,16 @@ const cancelAppointment = async (req, res) => {
     );
 
     appointmentBooked[appointment.appointmentDate] = appointmentDate;
-    // docData.appointmentBooked = appointmentBooked;
-    // await docData.save();
     await doctorModel.findByIdAndUpdate(appointment.docId, {
       appointmentBooked,
     });
 
-    // await appointmentModel.findByIdAndDelete(appointmentId);
     res.json({
       success: true,
       message: "Appointment cancelled successfully",
       data: null,
     });
   } catch (error) {
-    console.log(error);
     return res.json({
       success: false,
       message: error.message,
@@ -369,59 +332,6 @@ const cancelAppointment = async (req, res) => {
     });
   }
 };
-
-const paymentPaymob = async (req, res) => {
-  try {
-    const { appointmentId } = req.body;
-    const appointment = await appointmentModel.findById(appointmentId);
-
-    const payMob = await axios.post(
-      "https://accept.paymob.com/v1/intention/",
-      {
-        amount: appointment.price * 100,
-        currency: process.env.CURRENCY,
-        payment_methods: [Number(process.env.PAYMOBINTEGRATIONID)],
-
-        billing_data: {
-          first_name: appointment.userData.name.split(" ")[0] || "patient",
-          last_name: appointment.userData.name.split(" ")[1] || "Patient",
-          email: appointment.userData.email,
-          phone_number: appointment.userData.phone || "01000000000",
-          // بيانات dummy عشان الـ API يقبل
-          apartment: "NA",
-          floor: "NA",
-          street: "NA",
-          building: "NA",
-          city: "Cairo",
-          country: "EG",
-          state: "Cairo",
-        },
-      },
-      {
-        headers: {
-          Authorization: `Token ${process.env.PAYMOBSECRETKEY}`,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    // payment_url: payMob.data.client_url
-    return res.json({
-      success: true,
-      message: " Pay online integrated successfully",
-      data: payMob.data.client_url,
-    });
-  } catch (error) {
-    console.log(error);
-    return res.json({
-      success: false,
-      message: error.message,
-      data: null,
-    });
-  }
-};
-
-const paymobWebhook = async (req, res) => {};
-const paymobResponse = async (req, res) => {};
 
 export const userController = {
   register,
@@ -431,7 +341,4 @@ export const userController = {
   bookAppointment,
   appointmentsList,
   cancelAppointment,
-  paymentPaymob,
-  paymobWebhook,
-  paymobResponse,
 };
